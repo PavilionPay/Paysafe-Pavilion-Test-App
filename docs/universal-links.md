@@ -156,8 +156,12 @@ To make that work:
    ```
 3. **Have Pavilion register the exact URL** as an allowed redirect URI on the Plaid client used by VIP Preferred.
    It must match character for character, including any trailing slash.
-4. **Let the app simply come to the front.** Plaid Link resumes inside the cashier session; the app doesn't need to
-   parse or forward the URL. The sample's `onOpenURL` handler only acts on `/cashier-return` and ignores other paths.
+4. **Confirm with Paysafe how Checkout resumes Link.** With Plaid Hosted Link, Plaid tracks the session on its
+   servers, so the app only needs to come to the front; it doesn't parse or forward the URL. With Plaid's web Link,
+   the page at the redirect URI must receive the full URL (including Plaid's `oauth_state_id`) and restart Link with
+   it. If the bank app opens your app instead, the cashier page never gets that URL. Ask Paysafe which mode Checkout
+   uses when `isMobile` is `true` before relying on app-to-app OAuth. The sample's `onOpenURL` handler only acts on
+   `/cashier-return` and ignores other paths.
 
 The sample doesn't send `deepLink` or `isMobile` yet. Add them in `web/cashier.html` once your Universal Link is
 registered.

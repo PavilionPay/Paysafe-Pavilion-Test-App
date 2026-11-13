@@ -9,8 +9,9 @@ struct CashierApp: App {
             LobbyView()
                 .environment(wallet)
                 .preferredColorScheme(.dark)
-                // A Universal Link can arrive outside the web-auth session, e.g. when the bank's own app
-                // finishes OAuth and hands control back. Treat it the same as the session callback.
+                // A /cashier-return link that reaches the app outside the web-auth session is handled like
+                // the session callback. Other paths, such as a Plaid OAuth redirect from a bank app
+                // (/plaid-oauth), only need to bring the app forward: Plaid Link resumes in the session.
                 .onOpenURL { url in
                     guard url.path == AppConfig.returnPath || url.host == "cashier-return" else { return }
                     Task { await wallet.apply(outcome: CheckoutLauncher.parse(url)) }

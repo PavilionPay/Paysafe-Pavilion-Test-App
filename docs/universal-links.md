@@ -99,17 +99,68 @@ the AASA file when the app is installed.
 
 ## 6. Plaid OAuth redirect
 
-With Online Banking, Plaid sends the patron to their bank's OAuth page and then back to a **redirect URI** registered
-for the Plaid client. Two cases:
+The Plaid OAuth redirect URI is a different URL from the cashier return URL above:
 
-- **Bank login in the browser** (the patron doesn't have the bank's app). Everything stays inside the
-  `ASWebAuthenticationSession`, and the redirect returns to Checkout in the same Safari session. This works with the
-  sample as is; it was verified with Plaid's sandbox OAuth bank.
-- **App-to-app OAuth** (the bank's app is installed and opens instead). The bank app returns by opening the redirect
-  URI. To land back in your app, that URI must be a Universal Link your app claims, and it must be registered as an
-  allowed redirect URI for the Plaid client used by VIP Preferred. Pavilion manages that Plaid client, and Paysafe
-  Checkout passes the redirect URI when it starts Link, so coordinate the URI with both before relying on app-to-app
-  OAuth. Add the path to your AASA `components` as well.
+| | Cashier return URL | Plaid OAuth redirect URI |
+|---|---|---|
+| Purpose | Ends the cashier session and hands the result to the app | Brings the patron back to Plaid Link after the bank's OAuth login, mid-flow |
+| Who sets it | You (`cashier.html`, `AppConfig.returnPath`) | Paysafe Checkout, on the link token Pavilion creates |
+| Default value | `https://<your-host>/cashier-return` or `cashierdemo://cashier-return` | Paysafe's hosted VIP Preferred page, e.g. `https://hosted.paysafe.com/vippreferred/v1/index.html` (TEST: `hosted.test.paysafe.com`) |
+| Registered with Plaid? | No | Yes, as an allowed redirect URI on Pavilion's Plaid client |
+
+### How the redirect URI reaches Plaid
+
+1. When the patron chooses to link a bank, Paysafe Checkout asks Pavilion VIP Preferred for a Plaid link token and
+   includes the redirect URI in that request.
+2. Pavilion creates the link token with Plaid using that `redirect_uri`. Plaid accepts it only if it's on the
+   client's allowed list, which Pavilion maintains.
+3. Checkout opens Plaid Link with the token. After the bank login, the bank sends the patron to the redirect URI and
+   Link resumes.
+
+Your app and backend never call Plaid directly and never see the link token.
+
+### Bank login in the browser (works with the sample as is)
+
+If the patron doesn't have the bank's app, the bank's OAuth page opens inside the same `ASWebAuthenticationSession`.
+The bank redirects to Paysafe's hosted page, still in that Safari session, and Link resumes there. Nothing needs to be
+registered by you. This was verified with Plaid's sandbox OAuth bank.
+
+### App-to-app OAuth (the bank's app opens)
+
+If the bank's app is installed, iOS may open it instead of the web login. When the patron finishes, the bank app
+opens the redirect URI. With the default (Paysafe's web page), that lands in Safari, not in your app. To return to
+your app, the redirect URI has to be a **Universal Link your app claims**.
+
+> **Confirm with Paysafe.** The fields below come from Paysafe's integration team and are not yet in Paysafe's public
+> Checkout docs. Confirm the names and behavior with Paysafe before you rely on them.
+
+Paysafe Checkout accepts the merchant's Universal Link in the VIP Preferred options and forwards it to Pavilion:
+
+```js
+paymentMethodDetails: {
+  vippreferred: {
+    consumerId: '<9-digit SSN>',
+    deepLink: 'https://cashier.example.com/plaid-oauth',   // your Universal Link (confirm with Paysafe)
+    isMobile: true,                                         // patron is in a native app (confirm with Paysafe)
+  },
+},
+```
+
+To make that work:
+
+1. **Choose a dedicated path**, such as `/plaid-oauth`. Don't reuse `/cashier-return`: this link arrives mid-flow
+   and isn't a payment result.
+2. **Claim it in your AASA file** by adding it to `components` next to the return path:
+   ```json
+   { "/": "/plaid-oauth*", "comment": "Plaid OAuth redirect from bank apps" }
+   ```
+3. **Have Pavilion register the exact URL** as an allowed redirect URI on the Plaid client used by VIP Preferred.
+   It must match character for character, including any trailing slash.
+4. **Let the app simply come to the front.** Plaid Link resumes inside the cashier session; the app doesn't need to
+   parse or forward the URL. The sample's `onOpenURL` handler only acts on `/cashier-return` and ignores other paths.
+
+The sample doesn't send `deepLink` or `isMobile` yet. Add them in `web/cashier.html` once your Universal Link is
+registered.
 
 ## Testing the return
 

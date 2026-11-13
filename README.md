@@ -45,7 +45,11 @@ sequenceDiagram
     Note over Web,PS: Checkout shows Enroll: details prefilled from customer and billingAddress, patron adds ID and a bank
   end
   opt Add bank with Online Banking
-    PS->>Plaid: Plaid Link (bank OAuth inside the same Safari session)
+    PS->>VIP: request Plaid link token (includes Plaid OAuth redirect URI)
+    VIP->>Plaid: create link token with redirect_uri
+    VIP-->>PS: link token
+    PS->>Plaid: open Plaid Link (bank OAuth inside the same Safari session)
+    Note over PS,Plaid: Bank returns to the redirect URI (Paysafe's hosted page by default), Link resumes
     Plaid-->>PS: onSuccess
     PS->>VIP: add bank (VIP Preferred exchanges the Plaid token)
   end
@@ -95,6 +99,7 @@ paysafe.checkout.setup(publicApiKey /* base64 of "username:password" */, {
     vippreferred: {
       consumerId: '<9-digit SSN>',     // how VIP Preferred identifies the patron
       accountId: '<optional>',         // only if your merchant has more than one VIP Preferred account
+      // deepLink: 'https://host/plaid-oauth', isMobile: true,  // app-to-app bank OAuth; confirm with Paysafe (docs/universal-links.md §6)
     },
   },
 }, resultCallback, closeCallback);
@@ -156,10 +161,18 @@ returns a result to the app.
 
 ## Returning to the app: Universal Links
 
-Locally the cashier runs on `http://localhost`, so the session returns through the `cashierdemo://` custom scheme.
-Once `web/` and the API are on HTTPS, iOS 17.4+ can return through a Universal Link instead, which is also what Plaid
-needs for app-to-app bank OAuth. See **[docs/universal-links.md](docs/universal-links.md)** for registering the
-domain, the AASA file, the entitlement, and the Plaid redirect URI.
+Two different URLs bring the patron back, and they're easy to confuse:
+
+- **Cashier return URL** (yours): `cashier.html` navigates to it when Checkout is finished, which ends the
+  `ASWebAuthenticationSession`. Locally that's `cashierdemo://cashier-return`. On HTTPS with iOS 17.4+ it's the
+  Universal Link `https://<your-host>/cashier-return`.
+- **Plaid OAuth redirect URI** (set by Paysafe Checkout and registered with Plaid by Pavilion): where the bank sends
+  the patron after OAuth login so Plaid Link can resume. By default it's Paysafe's hosted page, which works for bank
+  logins in the browser. App-to-app bank OAuth needs your own Universal Link here instead, passed through Checkout's
+  `deepLink` option (confirm with Paysafe).
+
+See **[docs/universal-links.md](docs/universal-links.md)** for registering the domain, the AASA file, the entitlement,
+and both URLs.
 
 ## Troubleshooting (TEST)
 

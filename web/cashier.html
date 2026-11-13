@@ -47,6 +47,9 @@
 
         const vippreferred = { consumerId: cfg.consumerId };
         if (cfg.accountId) vippreferred.accountId = cfg.accountId;
+        // Optional app-to-app bank OAuth options (confirm with Paysafe). Sent only when set in server/.env.
+        if (cfg.deepLink) vippreferred.deepLink = cfg.deepLink;
+        if (typeof cfg.isMobile === 'boolean') vippreferred.isMobile = cfg.isMobile;
 
         paysafe.checkout.setup(cfg.apiKey, {
           currency: cfg.currency,

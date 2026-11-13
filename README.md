@@ -4,13 +4,19 @@ A sample iOS app and backend that show how to take a deposit with **Paysafe Chec
 **VIP Preferred** (Pavilion's ACH payment method), including bank linking through **Plaid OAuth** and enrolling
 new patrons.
 
-The app is a small sportsbook-style lobby with a cashier. When the patron continues to pay, the app opens the
-cashier page in **`ASWebAuthenticationSession`** (Safari-backed) instead of an embedded `WKWebView`. Plaid OAuth to
-the bank and back then works the way it does in Safari, which an embedded web view does not support reliably.
+The app is a small sportsbook-style lobby with a cashier. Like a real operator cashier, it lists every deposit
+method the operator offers (card, PayPal, Apple Pay, cage, wire, and so on) on the operator's own screen. **VIP
+Preferred is one of those choices** (eCheck/ACH - Bank Account), and it's the only one this sample implements; the
+other tiles are there for realism and do nothing.
+
+When the patron picks eCheck/ACH and taps Deposit, the app opens Paysafe Checkout for **that one method**
+(`displayPaymentMethods: ['vippreferred']`). It opens the cashier page in **`ASWebAuthenticationSession`**
+(Safari-backed) instead of an embedded `WKWebView`. Plaid OAuth to the bank and back then works the way it does in
+Safari, which an embedded web view does not support reliably.
 
 | Piece | What it does |
 |---|---|
-| `CashierApp/` | SwiftUI app: lobby, cashier sheet, patron entry, `ASWebAuthenticationSession` launcher |
+| `CashierApp/` | SwiftUI app: lobby, the operator's deposit-method grid (`DepositMethodsView`), the eCheck/ACH amount page, patron entry, `ASWebAuthenticationSession` launcher |
 | `web/cashier.html` | The page that runs `paysafe.checkout.setup()` with VIP Preferred |
 | `server/server.py` | Minimal merchant backend (Python standard library only): issues cashier sessions, serves Checkout config, completes payments with the private key |
 | `web/.well-known/apple-app-site-association` | Template AASA file for the Universal Link return |
@@ -99,7 +105,7 @@ paysafe.checkout.setup(publicApiKey /* base64 of "username:password" */, {
     vippreferred: {
       consumerId: '<9-digit SSN>',     // how VIP Preferred identifies the patron
       accountId: '<optional>',         // only if your merchant has more than one VIP Preferred account
-      // deepLink: 'https://host/plaid-oauth', isMobile: true,  // app-to-app bank OAuth; confirm with Paysafe (docs/universal-links.md §6)
+      // isMobile: true, deepLink: '<completion URI>',  // Hosted Link options; not active yet (docs/universal-links.md §6)
     },
   },
 }, resultCallback, closeCallback);
@@ -141,11 +147,11 @@ Requirements: Xcode 15 or later (iOS 17 SDK), [XcodeGen](https://github.com/yona
    simulator.
    - On a physical iPhone: set `DEVELOPMENT_TEAM` in `project.yml` and point `AppConfig.cashierBaseURL` at your Mac's
      LAN address (for example `http://192.168.1.20:8080`). `Info.plist` allows local-network HTTP for this.
-4. **Make a deposit:** tap the balance → pick an amount → **Continue to Paysafe**.
+4. **Make a deposit:** tap the balance → **eCheck/ACH - Bank Account** → pick an amount → **DEPOSIT**.
 
 ### Choosing the patron
 
-Cashier → **Patron** lets you choose who Checkout runs as:
+On the eCheck/ACH page, **Sample settings → Patron** lets you choose who Checkout runs as:
 
 - **Default test patron:** the `PAYSAFE_VIPP_CONSUMER_ID` and placeholder details from `server/.env`.
 - **Existing:** enter only an SSN for a patron already enrolled in VIP Preferred. The server supplies placeholder
@@ -167,9 +173,10 @@ Two different URLs bring the patron back, and they're easy to confuse:
   `ASWebAuthenticationSession`. Locally that's `cashierdemo://cashier-return`. On HTTPS with iOS 17.4+ it's the
   Universal Link `https://<your-host>/cashier-return`.
 - **Plaid OAuth redirect URI** (set by Paysafe Checkout and registered with Plaid by Pavilion): where the bank sends
-  the patron after OAuth login so Plaid Link can resume. By default it's Paysafe's hosted page, which works for bank
-  logins in the browser. App-to-app bank OAuth needs your own Universal Link here instead, passed through Checkout's
-  `deepLink` option (confirm with Paysafe).
+  the patron after OAuth login so Plaid Link can resume. It's Paysafe's hosted page, which works for bank logins in
+  the browser. You don't set it. App-to-app bank login (a bank's own app opening) needs Plaid Hosted Link, which
+  isn't available through Checkout and VIP Preferred yet; see §6 of the doc below for the `isMobile` and `deepLink`
+  options and their current status.
 
 See **[docs/universal-links.md](docs/universal-links.md)** for registering the domain, the AASA file, the entitlement,
 and both URLs.

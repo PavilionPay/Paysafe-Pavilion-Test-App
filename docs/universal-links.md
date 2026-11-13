@@ -127,44 +127,50 @@ registered by you. This was verified with Plaid's sandbox OAuth bank.
 
 ### App-to-app OAuth (the bank's app opens)
 
-If the bank's app is installed, iOS may open it instead of the web login. When the patron finishes, the bank app
-opens the redirect URI. With the default (Paysafe's web page), that lands in Safari, not in your app. To return to
-your app, the redirect URI has to be a **Universal Link your app claims**.
+On Plaid, only a few US banks (currently Chase and Chime) support app-to-app login. If the patron has that bank's
+app, iOS may open it instead of the web login. When the patron finishes, the bank app opens the redirect URI. With
+the default (Paysafe's web page), that lands in Safari, not back in your app or the cashier session.
 
-> **Confirm with Paysafe.** The fields below come from Paysafe's integration team and are not yet in Paysafe's public
-> Checkout docs. Confirm the names and behavior with Paysafe before you rely on them.
+Plaid's supported answer for native apps that run Link on the web is **Plaid Hosted Link in mobile mode**:
 
-Paysafe Checkout accepts the merchant's Universal Link in the VIP Preferred options and forwards it to Pavilion:
+- Plaid hosts Link itself and tracks the session on its servers, so the flow survives the switch to the bank's app.
+- The OAuth `redirect_uri` must be a Universal Link that opens your app. Your app only needs to come to the front;
+  it doesn't parse or forward the URL.
+- When Link finishes (success or exit), Plaid sends the patron to a **completion redirect URI**. That one can be a
+  custom scheme and doesn't need to be registered with Plaid.
+
+> **Confirm with Paysafe and Pavilion.** The options below come from Paysafe's integration team and are not yet in
+> Paysafe's public Checkout docs. Confirm the names and behavior before you rely on them.
+
+Paysafe Checkout accepts two VIP Preferred options for this:
 
 ```js
 paymentMethodDetails: {
   vippreferred: {
     consumerId: '<9-digit SSN>',
-    deepLink: 'https://cashier.example.com/plaid-oauth',   // your Universal Link (confirm with Paysafe)
-    isMobile: true,                                         // patron is in a native app (confirm with Paysafe)
+    isMobile: true,                        // ask for a mobile (Hosted Link) link token
+    deepLink: 'cashierdemo-plaid://done',  // Hosted Link completion URI: where the patron goes when Link finishes
   },
 },
 ```
 
-To make that work:
+What we observed in TEST:
 
-1. **Choose a dedicated path**, such as `/plaid-oauth`. Don't reuse `/cashier-return`: this link arrives mid-flow
-   and isn't a payment result.
-2. **Claim it in your AASA file** by adding it to `components` next to the return path:
-   ```json
-   { "/": "/plaid-oauth*", "comment": "Plaid OAuth redirect from bank apps" }
-   ```
-3. **Have Pavilion register the exact URL** as an allowed redirect URI on the Plaid client used by VIP Preferred.
-   It must match character for character, including any trailing slash.
-4. **Confirm with Paysafe how Checkout resumes Link.** With Plaid Hosted Link, Plaid tracks the session on its
-   servers, so the app only needs to come to the front; it doesn't parse or forward the URL. With Plaid's web Link,
-   the page at the redirect URI must receive the full URL (including Plaid's `oauth_state_id`) and restart Link with
-   it. If the bank app opens your app instead, the cashier page never gets that URL. Ask Paysafe which mode Checkout
-   uses when `isMobile` is `true` before relying on app-to-app OAuth. The sample's `onOpenURL` handler only acts on
-   `/cashier-return` and ignores other paths.
+- Checkout forwards both options to Pavilion with the link-token request: `isMobile` as the mobile flag, and
+  `deepLink` as the **Hosted Link completion URI**.
+- **`deepLink` is not the OAuth redirect URI.** The redirect URI stayed Paysafe's hosted page. Checkout currently
+  has no option for setting your own OAuth redirect URI.
+- The link token came back as a standard web Link token, not a Hosted Link session, so Link still ran inside the
+  cashier session. App-to-app bank login through Checkout and VIP Preferred therefore isn't available yet. Check its
+  status with Pavilion and Paysafe.
 
-The sample doesn't send `deepLink` or `isMobile` yet. Add them in `web/cashier.html` once your Universal Link is
-registered.
+If you set `deepLink`, pick a URL that won't end the cashier session early. In this sample, any `cashierdemo://`
+URL ends the `ASWebAuthenticationSession` on the custom-scheme path, so use a different scheme (as above) or an
+`https://` URL other than `/cashier-return`. The sample's `onOpenURL` handler only acts on `/cashier-return` and
+ignores other paths.
+
+The sample sends `deepLink` and `isMobile` only when you set `PAYSAFE_VIPP_DEEP_LINK` and `PAYSAFE_VIPP_IS_MOBILE` in
+`server/.env`.
 
 ## Testing the return
 

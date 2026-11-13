@@ -9,6 +9,7 @@ TEST credentials only. Binds to all interfaces so a physical iPhone on the LAN c
 import base64
 import json
 import os
+import re
 import secrets
 import threading
 import time
@@ -47,6 +48,16 @@ PORT = int(ENV.get("PORT", "8080"))
 # TEST only. EXTERNAL routes VIP Preferred (incl. Plaid) to Pavilion's test system; Paysafe's default INTERNAL
 # simulator fails Plaid and delays some amounts. Empty = omit. Never sent outside TEST.
 SIMULATOR = ENV.get("PAYSAFE_SIMULATOR", "EXTERNAL") if ENVIRONMENT == "TEST" else ""
+# Optional VIP Preferred mobile options for app-to-app bank OAuth (confirm with Paysafe; not in the public docs).
+# IS_MOBILE: "true" or "false", asks for a mobile (Plaid Hosted Link) link token. DEEP_LINK: the Hosted Link
+# completion URI (any scheme; not the OAuth redirect URI). Empty = omit.
+DEEP_LINK = ENV.get("PAYSAFE_VIPP_DEEP_LINK", "").strip()
+_is_mobile = ENV.get("PAYSAFE_VIPP_IS_MOBILE", "").strip().lower()
+IS_MOBILE = {"true": True, "false": False}.get(_is_mobile)
+if _is_mobile and IS_MOBILE is None:
+    raise SystemExit("PAYSAFE_VIPP_IS_MOBILE must be true or false")
+if DEEP_LINK and not re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://\S+$", DEEP_LINK):
+    raise SystemExit("PAYSAFE_VIPP_DEEP_LINK must be a URL such as myapp-plaid://done or https://host/path")
 
 # VIP Preferred rejects setup without billing details ("Invalid fields: billingDetails").
 # Fake TEST patron; override any field via PAYSAFE_TEST_* in .env.
@@ -251,6 +262,10 @@ class Handler(SimpleHTTPRequestHandler):
                 config["accountId"] = ACCOUNT_ID
             if SIMULATOR:
                 config["simulator"] = SIMULATOR
+            if DEEP_LINK:
+                config["deepLink"] = DEEP_LINK
+            if IS_MOBILE is not None:
+                config["isMobile"] = IS_MOBILE
             return self.send_json(200, config)
         if path == "/cashier-return":
             # Only reached if nothing intercepts the return URL (e.g. opened in plain Safari).
@@ -326,6 +341,8 @@ def main():
     if missing:
         print(f"Missing in server/.env: {', '.join(missing)} (Checkout or payments will fail)")
     print(f"Paysafe {ENVIRONMENT} via {API_BASE} (simulator={SIMULATOR or 'default'}); serving {WEB_DIR} on http://0.0.0.0:{PORT}")
+    if DEEP_LINK or IS_MOBILE is not None:
+        print(f"VIP Preferred mobile options: deepLink={DEEP_LINK or '(none)'} isMobile={IS_MOBILE}")
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 
 

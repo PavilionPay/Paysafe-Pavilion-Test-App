@@ -1,4 +1,15 @@
-# Registering the Universal Link
+# Returning to the app: return, redirect and completion URLs
+
+Three different URLs are involved in getting the patron back to your app. Only one of them is yours to set today,
+and **none of them has to be a Universal Link for the sample, or a merchant, to work now**:
+
+| URL | Who sets it | Must it be a Universal Link? |
+|---|---|---|
+| **Cashier return URL** (`/cashier-return`) | You (`cashier.html`) | **No.** The custom scheme `cashierdemo://` works. A Universal Link is optional and more secure, on HTTPS with iOS 17.4+ (sections 1–5 below). |
+| **Plaid OAuth redirect URI** | Paysafe Checkout (its hosted page); Pavilion registers it with Plaid | **Not today.** It's Paysafe's web page, and bank login in the browser works with it. **For app-to-app bank login it would have to be a Universal Link your app claims**, but Checkout has no option for setting it yet (section 6). |
+| **Hosted Link completion URI** (`deepLink`) | You, through Checkout's `deepLink` option | **No.** A custom scheme is fine and it isn't registered with Plaid. Not active yet (section 6). |
+
+## The cashier return URL
 
 The cashier session has to hand control back to the app when Checkout finishes. This sample supports two ways:
 
@@ -97,16 +108,18 @@ static let cashierBaseURL = URL(string: "https://cashier.example.com")!
 `AppConfig.returnPath` (`/cashier-return`) must match the AASA `components` path. Rebuild and reinstall; iOS fetches
 the AASA file when the app is installed.
 
-## 6. Plaid OAuth redirect
+## 6. Plaid OAuth redirect and Hosted Link completion URLs
 
 The Plaid OAuth redirect URI is a different URL from the cashier return URL above:
 
-| | Cashier return URL | Plaid OAuth redirect URI |
-|---|---|---|
-| Purpose | Ends the cashier session and hands the result to the app | Brings the patron back to Plaid Link after the bank's OAuth login, mid-flow |
-| Who sets it | You (`cashier.html`, `AppConfig.returnPath`) | Paysafe Checkout, on the link token Pavilion creates |
-| Default value | `https://<your-host>/cashier-return` or `cashierdemo://cashier-return` | Paysafe's hosted VIP Preferred page, e.g. `https://hosted.paysafe.com/vippreferred/v1/index.html` (TEST: `hosted.test.paysafe.com`) |
-| Registered with Plaid? | No | Yes, as an allowed redirect URI on Pavilion's Plaid client |
+| | Cashier return URL | Plaid OAuth redirect URI | Hosted Link completion URI |
+|---|---|---|---|
+| Purpose | Ends the cashier session and hands the result to the app | Brings the patron back to Plaid Link after the bank's OAuth login, mid-flow | Where Plaid Hosted Link sends the patron when Link finishes (success or exit) |
+| Who sets it | You (`cashier.html`, `AppConfig.returnPath`) | Paysafe Checkout, on the link token Pavilion creates | You, through Checkout's `deepLink` option |
+| Value | `https://<your-host>/cashier-return` or `cashierdemo://cashier-return` | Paysafe's hosted VIP Preferred page, e.g. `https://hosted.paysafe.com/vippreferred/v1/index.html` (TEST: `hosted.test.paysafe.com`) | Any URL, e.g. `cashierdemo-plaid://done` |
+| Universal Link? | Optional | Required for app-to-app bank login; not settable through Checkout yet | Not required |
+| Registered with Plaid? | No | Yes, as an allowed redirect URI on Pavilion's Plaid client | No |
+| Status | Works | Works for bank login in the browser | Not active yet |
 
 ### How the redirect URI reaches Plaid
 

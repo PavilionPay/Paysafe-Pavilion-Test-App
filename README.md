@@ -165,21 +165,19 @@ SSN's last four digits. The app keeps it in memory. Use synthetic identities.
 The **Use Paysafe demo store** toggle opens Paysafe's public iGaming demo instead. It needs no keys, but it never
 returns a result to the app.
 
-## Returning to the app: Universal Links
+## Returning to the app: return, redirect and completion URLs
 
-Two different URLs bring the patron back, and they're easy to confuse:
+Three different URLs are involved, and they're easy to confuse. None of them has to be a Universal Link for the
+sample to work today:
 
-- **Cashier return URL** (yours): `cashier.html` navigates to it when Checkout is finished, which ends the
-  `ASWebAuthenticationSession`. Locally that's `cashierdemo://cashier-return`. On HTTPS with iOS 17.4+ it's the
-  Universal Link `https://<your-host>/cashier-return`.
-- **Plaid OAuth redirect URI** (set by Paysafe Checkout and registered with Plaid by Pavilion): where the bank sends
-  the patron after OAuth login so Plaid Link can resume. It's Paysafe's hosted page, which works for bank logins in
-  the browser. You don't set it. App-to-app bank login (a bank's own app opening) needs Plaid Hosted Link, which
-  isn't available through Checkout and VIP Preferred yet; see §6 of the doc below for the `isMobile` and `deepLink`
-  options and their current status.
+| URL | What it does | Who sets it | Must it be a Universal Link? |
+|---|---|---|---|
+| **Cashier return URL** | `cashier.html` navigates to it when Checkout finishes; ends the `ASWebAuthenticationSession` | You | **No.** `cashierdemo://cashier-return` works; `https://<your-host>/cashier-return` is optional (HTTPS, iOS 17.4+) |
+| **Plaid OAuth redirect URI** | Where the bank sends the patron after OAuth login so Plaid Link can resume | Paysafe Checkout (its hosted page); Pavilion registers it with Plaid | **Not today.** Browser bank login works with Paysafe's page. App-to-app bank login would need a Universal Link your app claims, which Checkout can't set yet |
+| **Hosted Link completion URI** | Where Plaid Hosted Link sends the patron when Link finishes | You, via Checkout's `deepLink` option | **No.** A custom scheme is fine. Not active yet |
 
-See **[docs/universal-links.md](docs/universal-links.md)** for registering the domain, the AASA file, the entitlement,
-and both URLs.
+See **[docs/universal-links.md](docs/universal-links.md)** for setting up the Universal Link return (domain, AASA
+file, entitlement) and §6 for the Plaid URLs and the `isMobile`/`deepLink` options.
 
 ## Troubleshooting (TEST)
 

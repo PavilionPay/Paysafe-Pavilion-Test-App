@@ -1,0 +1,9 @@
+*.xcodeproj
+xcuserdata/
+DerivedData/
+.build/
+web/config.local.js
+CashierApp/Info.plist
+.DS_Store
+server/.env
+__pycache__/

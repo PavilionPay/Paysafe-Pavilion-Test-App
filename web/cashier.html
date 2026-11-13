@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cashier</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; background: #0b0b0f; color: #eee;
+           display: grid; place-items: center; min-height: 100vh; margin: 0; }
+    #status { text-align: center; padding: 24px; }
+  </style>
+</head>
+<body>
+  <div id="status">Loading cashier…</div>
+
+  <script src="https://hosted.paysafe.com/checkout/v2/paysafe.checkout.min.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const sid = params.get('sid');
+    const cb = params.get('cb') === 'https' ? 'https' : 'scheme';
+    const statusEl = document.getElementById('status');
+    let finished = false;
+    let paymentInFlight = false;
+
+    // ASWebAuthenticationSession intercepts this navigation and hands the URL to the app.
+    function finish(status, extra = {}) {
+      if (finished) return;
+      finished = true;
+      const q = new URLSearchParams({ status, ...extra }).toString();
+      location.replace(cb === 'https'
+        ? `${location.origin}/cashier-return?${q}`
+        : `cashierdemo://cashier-return?${q}`);
+    }
+
+    // Exchange the opaque sid for Checkout config. consumerId and keys never travel in the URL.
+    async function loadConfig() {
+      const res = await fetch(`/api/cashier/session/${encodeURIComponent(sid)}`);
+      if (!res.ok) throw new Error((await res.json()).message || 'Cashier session expired');
+      return res.json();
+    }
+
+    (async () => {
+      try {
+        if (!sid) throw new Error('Missing cashier session');
+        const cfg = await loadConfig();
+        statusEl.textContent = 'Opening Paysafe…';
+
+        const vippreferred = { consumerId: cfg.consumerId };
+        if (cfg.accountId) vippreferred.accountId = cfg.accountId;
+
+        paysafe.checkout.setup(cfg.apiKey, {
+          currency: cfg.currency,
+          amount: cfg.amount,
+          locale: cfg.locale,
+          environment: cfg.environment,
+          ...(cfg.simulator && { simulator: cfg.simulator }),
+          merchantRefNum: cfg.merchantRefNum,
+          customer: cfg.customer,
+          billingAddress: cfg.billingAddress,
+          canEditAmount: false,
+          displayPaymentMethods: ['vippreferred'],
+          paymentMethodDetails: { vippreferred },
+        }, async function (instance, error, result) {
+          if (error) {
+            console.error('Checkout error', error.correlationId, error.message);
+            instance.showFailureScreen(error.detailedMessage || error.message || 'Checkout error');
+            return;
+          }
+          paymentInFlight = true;
+          statusEl.textContent = 'Completing payment…';
+          try {
+            // The backend completes the payment with the private key.
+            const res = await fetch(`/api/cashier/session/${encodeURIComponent(sid)}/complete`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ paymentHandleToken: result.paymentHandleToken || result.token }),
+            });
+            const body = await res.json();
+            if (res.ok) {
+              instance.showSuccessScreen('Deposit received.');
+              setTimeout(() => finish('success', { ref: body.reference || '' }), 1500);
+            } else {
+              instance.showFailureScreen(body.message || 'Payment declined');
+              setTimeout(() => finish('failed', { message: body.message || 'Payment declined' }), 2500);
+            }
+          } catch (e) {
+            console.error('Complete request failed', e);
+            finish('failed', { message: 'Could not complete payment' });
+          }
+        }, function (stage, expired) {
+          // Fires when the user closes Checkout, or after instance.close(). Let an in-flight payment finish.
+          if (paymentInFlight) return;
+          finish('cancelled', expired ? { message: 'Checkout expired' } : {});
+        });
+      } catch (e) {
+        statusEl.textContent = e.message;
+        finish('failed', { message: e.message });
+      }
+    })();
+  </script>
+</body>
+</html>

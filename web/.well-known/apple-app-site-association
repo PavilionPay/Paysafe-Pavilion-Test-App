@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["TEAMID.com.pavilionpay.cashierdemo"],
+        "components": [
+          { "/": "/cashier-return*", "comment": "Plaid OAuth / cashier completion return" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["TEAMID.com.pavilionpay.cashierdemo"]
+  }
+}

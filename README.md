@@ -51,11 +51,11 @@ sequenceDiagram
     Note over Web,PS: Checkout shows Enroll: details prefilled from customer and billingAddress, patron adds ID and a bank
   end
   opt Add bank with Online Banking
-    PS->>VIP: request Plaid link token (includes Plaid OAuth redirect URI)
-    VIP->>Plaid: create link token with redirect_uri
+    PS->>VIP: request Plaid link token
+    VIP->>Plaid: create link token
     VIP-->>PS: link token
-    PS->>Plaid: open Plaid Link (bank OAuth inside the same Safari session)
-    Note over PS,Plaid: Bank returns to the redirect URI (Paysafe's hosted page by default), Link resumes
+    PS->>Plaid: open Plaid Link (bank login inside the same Safari session)
+    Note over PS,Plaid: Bank returns to Paysafe's hosted page, Link continues
     Plaid-->>PS: onSuccess
     PS->>VIP: add bank (VIP Preferred exchanges the Plaid token)
   end
@@ -105,7 +105,6 @@ paysafe.checkout.setup(publicApiKey /* base64 of "username:password" */, {
     vippreferred: {
       consumerId: '<9-digit SSN>',     // how VIP Preferred identifies the patron
       accountId: '<optional>',         // only if your merchant has more than one VIP Preferred account
-      // isMobile: true, deepLink: '<completion URI>',  // Hosted Link options; not active yet (docs/universal-links.md §6)
     },
   },
 }, resultCallback, closeCallback);
@@ -165,19 +164,20 @@ SSN's last four digits. The app keeps it in memory. Use synthetic identities.
 The **Use Paysafe demo store** toggle opens Paysafe's public iGaming demo instead. It needs no keys, but it never
 returns a result to the app.
 
-## Returning to the app: return, redirect and completion URLs
+## Returning to the app
 
-Three different URLs are involved, and they're easy to confuse. None of them has to be a Universal Link for the
-sample to work today:
+You set **one URL, the return URL**. The cashier page navigates to it when Checkout finishes, which closes the
+`ASWebAuthenticationSession` and hands the result to the app.
 
-| URL | What it does | Who sets it | Must it be a Universal Link? |
-|---|---|---|---|
-| **Cashier return URL** | `cashier.html` navigates to it when Checkout finishes; ends the `ASWebAuthenticationSession` | You | **No.** `cashierdemo://cashier-return` works; `https://<your-host>/cashier-return` is optional (HTTPS, iOS 17.4+) |
-| **Plaid OAuth redirect URI** | Where the bank sends the patron after OAuth login so Plaid Link can resume | Paysafe Checkout (its hosted page); Pavilion registers it with Plaid | **Not today.** Browser bank login works with Paysafe's page. App-to-app bank login would need a Universal Link your app claims, which Checkout can't set yet |
-| **Hosted Link completion URI** | Where Plaid Hosted Link sends the patron when Link finishes | You, via Checkout's `deepLink` option | **No.** A custom scheme is fine. Not active yet |
+| Term | What it means here | Who sets it |
+|---|---|---|
+| **Return URL** | Where the cashier page goes when Checkout finishes | **You** |
+| **Custom scheme** | Return URL as `yourapp://cashier-return`: works everywhere, no server setup; fine for development | You (option) |
+| **Universal Link** | Return URL as `https://<your-domain>/cashier-return`: Apple-verified, so no other app can receive it; recommended for production (HTTPS, iOS 17.4+) | You (option) |
+| **Bank OAuth redirect URL** | Where the bank sends the patron after bank login; Paysafe's hosted page | Paysafe and Pavilion. **Nothing for you to do** |
 
-See **[docs/universal-links.md](docs/universal-links.md)** for setting up the Universal Link return (domain, AASA
-file, entitlement) and §6 for the Plaid URLs and the `isMobile`/`deepLink` options.
+See **[docs/returning-to-the-app.md](docs/returning-to-the-app.md)** for the steps, why the cashier runs in
+`ASWebAuthenticationSession`, and the Universal Link setup (domain, AASA file, entitlement).
 
 ## Troubleshooting (TEST)
 

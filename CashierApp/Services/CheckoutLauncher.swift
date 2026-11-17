@@ -59,8 +59,9 @@ final class CheckoutLauncher: NSObject, ASWebAuthenticationPresentationContextPr
                     completionHandler: completion)
             }
             session.presentationContextProvider = self
-            // Shared Safari cookies let the user stay signed in to their bank/Plaid between attempts.
-            session.prefersEphemeralWebBrowserSession = false
+            // Private session: iOS skips its "wants to use … to Sign In" prompt, and the cashier shares no
+            // cookies with Safari. Saved banks still work; VIP Preferred keeps them on the server.
+            session.prefersEphemeralWebBrowserSession = true
             self.session = session
 
             if !session.start() {

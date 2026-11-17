@@ -10,9 +10,9 @@ Preferred is one of those choices** (eCheck/ACH - Bank Account), and it's the on
 other tiles are there for realism and do nothing.
 
 When the patron picks eCheck/ACH and taps Deposit, the app opens Paysafe Checkout for **that one method**
-(`displayPaymentMethods: ['vippreferred']`). It opens the cashier page in **`ASWebAuthenticationSession`**
+(`displayPaymentMethods: ['vippreferred']`). It opens the cashier page in a private **`ASWebAuthenticationSession`**
 (Safari-backed) instead of an embedded `WKWebView`. Plaid OAuth to the bank and back then works the way it does in
-Safari, which an embedded web view does not support reliably.
+Safari, which an embedded web view does not support reliably, and the private session skips iOS's sign-in prompt.
 
 | Piece | What it does |
 |---|---|

@@ -17,7 +17,7 @@ not another URL to manage.
 
 ## What you need to do
 
-1. **Open the cashier in `ASWebAuthenticationSession`**, not an embedded `WKWebView`
+1. **Open the cashier in a private `ASWebAuthenticationSession`**, not an embedded `WKWebView`
    ([why](#why-aswebauthenticationsession)).
 2. **Pick how the return URL reaches the app:** a custom scheme or a Universal Link
    ([which one](#custom-scheme-or-universal-link)).
@@ -40,6 +40,17 @@ inside one session with no setup on your side. Embedded `WKWebView`s are not rel
 banks block their login pages there, and the patron may not get back to Checkout.
 
 The session also ends by itself when the page reaches your return URL, which is what hands the result to the app.
+
+### Use a private session
+
+Set `prefersEphemeralWebBrowserSession = true`:
+
+- **No sign-in prompt.** With a shared session, iOS first asks "*App* wants to use *host* to Sign In" every time the
+  cashier opens. A private session skips it.
+- **Nothing shared with Safari.** The cashier starts clean each time and leaves no cookies behind.
+- **Saved banks still work.** VIP Preferred keeps the patron's linked banks on the server, not in browser cookies.
+
+Bank login (Plaid OAuth) works in a private session too.
 
 ## Custom scheme or Universal Link
 
@@ -152,3 +163,7 @@ the AASA file when the app is installed.
 The bank OAuth redirect URL is Paysafe's hosted page. Paysafe and Pavilion set it up with Plaid, and the patron
 returns to it inside the same `ASWebAuthenticationSession`. You don't register anything with Plaid, and your app
 doesn't need to handle any bank or Plaid link. Your app only ever receives the return URL.
+
+**Banks with their own app.** A few banks (for example Chase) can hand the login to their own iOS app when the patron
+has it installed. That return path, from the bank's app back into the cashier, isn't covered by this sample yet.
+Bank logins that stay in the browser, which is most banks, work as described above.

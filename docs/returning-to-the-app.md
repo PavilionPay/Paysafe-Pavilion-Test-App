@@ -43,7 +43,8 @@ The session also ends by itself when the page reaches your return URL, which is 
 
 ### Use a private session
 
-Set `prefersEphemeralWebBrowserSession = true`:
+Set `prefersEphemeralWebBrowserSession = true`. In this sample that's `AppConfig.privateCashierSession`, on by
+default:
 
 - **No sign-in prompt.** With a shared session, iOS first asks "*App* wants to use *host* to Sign In" every time the
   cashier opens. A private session skips it.
@@ -51,6 +52,11 @@ Set `prefersEphemeralWebBrowserSession = true`:
 - **Saved banks still work.** VIP Preferred keeps the patron's linked banks on the server, not in browser cookies.
 
 Bank login (Plaid OAuth) works in a private session too.
+
+The trade-off: nothing carries over between deposits. A bank may not recognize the device and ask for an extra
+verification code when the patron adds a bank, and any risk check that relies on a long-lived browser cookie sees a
+new device each time. If that matters for you, set `privateCashierSession` to `false`; iOS then shows its sign-in
+prompt each time the cashier opens.
 
 ## Custom scheme or Universal Link
 

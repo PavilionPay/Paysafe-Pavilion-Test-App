@@ -59,9 +59,8 @@ final class CheckoutLauncher: NSObject, ASWebAuthenticationPresentationContextPr
                     completionHandler: completion)
             }
             session.presentationContextProvider = self
-            // Private session: iOS skips its "wants to use … to Sign In" prompt, and the cashier shares no
-            // cookies with Safari. Saved banks still work; VIP Preferred keeps them on the server.
-            session.prefersEphemeralWebBrowserSession = true
+            // Private by default; see AppConfig.privateCashierSession for the trade-off.
+            session.prefersEphemeralWebBrowserSession = AppConfig.privateCashierSession
             self.session = session
 
             if !session.start() {

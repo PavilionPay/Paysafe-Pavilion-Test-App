@@ -15,6 +15,12 @@ enum AppConfig {
     /// Custom-scheme callback, used for http:// hosts and on iOS < 17.4.
     static let fallbackScheme = "cashierdemo"
 
+    /// true: private session. iOS shows no "wants to use … to Sign In" prompt, and the cashier shares no cookies
+    /// with Safari, so each deposit starts clean. Saved banks still work (VIP Preferred keeps them on the server).
+    /// false: shared with Safari. iOS shows the prompt each time, and cookies such as a bank's
+    /// "remember this device" carry over between deposits.
+    static let privateCashierSession = true
+
     /// Paysafe's public iGaming demo store. Has its own test keys and a VIP Preferred demo customer,
     /// so it runs without a backend, domain or Universal Link. It never redirects back to the app.
     static let paysafeDemoURL = URL(string: "https://checkout.paysafe.com/payments-api/checkout/igaming/index.html")!

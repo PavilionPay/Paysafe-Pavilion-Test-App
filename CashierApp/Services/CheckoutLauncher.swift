@@ -37,6 +37,10 @@ final class CheckoutLauncher: NSObject, ASWebAuthenticationPresentationContextPr
         try await withCheckedThrowingContinuation { continuation in
             let completion: ASWebAuthenticationSession.CompletionHandler = { callbackURL, error in
                 if let error {
+                    #if DEBUG
+                    // A missing webcredentials association also ends here as "cancelled"; the description names it.
+                    print("Cashier session ended: \(error.localizedDescription)")
+                    #endif
                     let code = (error as? ASWebAuthenticationSessionError)?.code
                     continuation.resume(returning: code == .canceledLogin ? onCancel : .failed(error.localizedDescription))
                 } else if let callbackURL {

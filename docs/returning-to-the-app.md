@@ -72,6 +72,9 @@ Use your own scheme name, not `cashierdemo`.
 
 ## Setting up the Universal Link return
 
+> **Not yet tested end to end in this sample.** Test runs so far used the custom scheme. The steps below follow
+> Apple's requirements; test on a device before you rely on them.
+
 ### 1. Host the cashier on HTTPS
 
 Serve `web/` and the cashier API from one HTTPS origin you control, for example `https://cashier.example.com`.
@@ -103,7 +106,8 @@ Edit `CashierApp/CashierApp.entitlements` and replace the placeholder host:
 
 While iterating on a test device you can add `?mode=developer` (`applinks:cashier.example.com?mode=developer`) and
 turn on **Settings → Developer → Associated Domains Development**. iOS then fetches the AASA file from your server
-directly instead of Apple's CDN, so changes show up right away.
+directly instead of Apple's CDN, so changes show up right away. Ship release builds with the plain entries (no
+`?mode=developer`).
 
 ### 4. Publish the apple-app-site-association file
 
@@ -129,6 +133,11 @@ with `TEAMID` replaced by your team ID:
 Requirements that commonly break it:
 
 - **Every app ID needs the team ID prefix** (`ABCDE12345.` in front of the bundle ID). Without it iOS ignores the entry.
+- **Add `webcredentials`, even if your Universal Links already work.** Universal Links need only `applinks`, but a
+  session that finishes on an https URL also needs the app listed under `webcredentials`, in both the AASA file and
+  the entitlement. Without it iOS won't open the cashier: `start()` returns `false`, or the session ends at once as
+  "cancelled" (`canceledLogin`). The error's `localizedDescription` names the cause ("Using HTTPS callbacks requires
+  Associated Domains using the `webcredentials` service type"); the sample prints it in debug builds.
 - **HTTPS with a valid certificate, HTTP 200, no redirects.**
 - **`Content-Type: application/json`.** Some static hosts serve the extensionless file as
   `application/octet-stream`. If yours does, publish a copy named `apple-app-site-association.json` and add a rewrite

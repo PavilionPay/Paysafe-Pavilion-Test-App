@@ -70,9 +70,9 @@ sequenceDiagram
 
 1. **The app never holds a Paysafe key or the patron's SSN in a URL.** It asks the backend for a cashier session and
    gets back an opaque `sid`.
-2. **The app opens the cashier page in `ASWebAuthenticationSession`** (`CheckoutLauncher.swift`). On iOS 17.4+ with
-   an HTTPS host the session completes on a Universal Link (`https://host/cashier-return`). Otherwise it completes on
-   the custom scheme `cashierdemo://cashier-return`.
+2. **The app opens the cashier page in a private `ASWebAuthenticationSession`** (`CheckoutLauncher.swift`,
+   `AppConfig.privateCashierSession`). On iOS 17.4+ with an HTTPS host the session completes on a Universal Link
+   (`https://host/cashier-return`). Otherwise it completes on the custom scheme `cashierdemo://cashier-return`.
 3. **The page exchanges the `sid` for its Checkout config** and calls `paysafe.checkout.setup()` with VIP Preferred as
    the only payment method.
 4. **Paysafe Checkout runs the whole VIP Preferred experience**: balance and linked banks for enrolled patrons, Add
@@ -129,7 +129,7 @@ Things that are easy to get wrong:
 
 ## Run it
 
-Requirements: Xcode 15 or later (iOS 17 SDK), [XcodeGen](https://github.com/yonaskolb/XcodeGen)
+Requirements: Xcode 15.3 or later (iOS 17.4 SDK), [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 (`brew install xcodegen`), Python 3.10 or later, and Paysafe TEST credentials with VIP Preferred enabled.
 
 1. **Configure the backend.**
@@ -139,7 +139,7 @@ Requirements: Xcode 15 or later (iOS 17 SDK), [XcodeGen](https://github.com/yona
    Fill in:
    - `PAYSAFE_PUBLIC_API_KEY`: public (single-use token) key, as `username:password` or its base64
    - `PAYSAFE_PRIVATE_API_KEY`: private (server-to-server) key, same format
-   - `PAYSAFE_VIPP_CONSUMER_ID`: a VIP Preferred test consumer ID from Paysafe/Pavilion (the default patron)
+   - `PAYSAFE_VIPP_CONSUMER_ID`: a VIP Preferred test consumer ID from Pavilion (the default patron)
    - `PAYSAFE_VIPP_ACCOUNT_ID`: optional, only if Paysafe set up more than one VIP Preferred account
 2. **Start the backend:** `python3 -u server/server.py` (port 8080; serves `web/` and the cashier API).
 3. **Generate and open the project:** `xcodegen generate`, then open `CashierApp.xcodeproj` and run on an iOS 17+
@@ -155,6 +155,9 @@ On the eCheck/ACH page, **Sample settings → Patron** lets you choose who Check
 - **Default test patron:** the `PAYSAFE_VIPP_CONSUMER_ID` and placeholder details from `server/.env`.
 - **Existing:** enter only an SSN for a patron already enrolled in VIP Preferred. The server supplies placeholder
   contact details.
+
+  > **Need existing test patrons?** Work with Pavilion. They can provide test patron data already enrolled in the
+  > VIP Preferred test system, with linked banks and balances.
 - **New:** enter name, SSN, date of birth, phone, email and a US address. Checkout shows its Enroll flow with these
   details prefilled; the patron then adds an ID document and a bank account.
 
@@ -174,7 +177,7 @@ You set **one URL, the return URL**. The cashier page navigates to it when Check
 | **Return URL** | Where the cashier page goes when Checkout finishes | **You** |
 | **Custom scheme** | Return URL as `yourapp://cashier-return`: works everywhere, no server setup; fine for development | You (option) |
 | **Universal Link** | Return URL as `https://<your-domain>/cashier-return`: Apple-verified, so no other app can receive it; recommended for production (HTTPS, iOS 17.4+) | You (option) |
-| **Bank OAuth redirect URL** | Where the bank sends the patron after bank login; Paysafe's hosted page | Paysafe and Pavilion. **Nothing for you to do** |
+| **Bank OAuth redirect URL** | Where the bank sends the patron after bank login; Paysafe's hosted page | Paysafe and Pavilion. **Nothing for you to do** (see the [note on banks with their own app](docs/returning-to-the-app.md#bank-login-nothing-to-configure)) |
 
 See **[docs/returning-to-the-app.md](docs/returning-to-the-app.md)** for the steps, why the cashier runs in
 `ASWebAuthenticationSession`, and the Universal Link setup (domain, AASA file, entitlement).
@@ -188,7 +191,8 @@ See **[docs/returning-to-the-app.md](docs/returning-to-the-app.md)** for the ste
 | `POST /paymenthub/v1/payments` hangs ~60 s, then HTTP 504 | Same cause (internal simulator delays some amounts). Use `EXTERNAL`; look the payment up by `merchantRefNum` before retrying |
 | Enroll fails: "DL: An input error has been detected in the entry of the ID provided" | The ID number doesn't match the issuing state's format (for example, Ohio licenses are 2 letters + 6 digits) |
 | Add bank fails: "Banking data not updated, previously registered and is now deactivated" | Plaid sandbox banks return the same shared account numbers to every tester. Use Manual Banking with a unique account number, or a custom Plaid sandbox user with its own numbers |
-| Patron "not enrolled" when you expected an existing account | The SSN isn't enrolled in the VIP Preferred test system; use a test consumer ID provided by Paysafe/Pavilion |
+| The bank's own app opens (for example Chase) and the patron ends up in Safari | The return from a bank's app isn't covered by this sample yet. Link the bank on its website instead, or use Manual Banking |
+| Patron "not enrolled" when you expected an existing account | The SSN isn't enrolled in the VIP Preferred test system; use a test consumer ID provided by Pavilion |
 
 ## Going to production
 
@@ -197,3 +201,5 @@ See **[docs/returning-to-the-app.md](docs/returning-to-the-app.md)** for the ste
 - Take the patron's identity from your own account system. Don't let the client pick the SSN; this sample does so only
   to exercise enrollment in TEST.
 - Confirm deposits with Paysafe webhooks before crediting balances, and handle `PENDING`.
+- Decide on `AppConfig.privateCashierSession`, and check with your risk team whether anything relies on a long-lived
+  browser cookie.

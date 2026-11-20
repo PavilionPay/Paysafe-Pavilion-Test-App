@@ -72,8 +72,8 @@ Use your own scheme name, not `cashierdemo`.
 
 ## Setting up the Universal Link return
 
-> **Not yet tested end to end in this sample.** Test runs so far used the custom scheme. The steps below follow
-> Apple's requirements; test on a device before you rely on them.
+> **Partly tested.** An https return with `applinks` and `webcredentials` set up as below has been tested on a device,
+> in a separate test app. This sample's own test runs used the custom scheme. Test on a device before you rely on it.
 
 ### 1. Host the cashier on HTTPS
 
@@ -104,10 +104,17 @@ Edit `CashierApp/CashierApp.entitlements` and replace the placeholder host:
 </array>
 ```
 
-While iterating on a test device you can add `?mode=developer` (`applinks:cashier.example.com?mode=developer`) and
-turn on **Settings → Developer → Associated Domains Development**. iOS then fetches the AASA file from your server
-directly instead of Apple's CDN, so changes show up right away. Ship release builds with the plain entries (no
-`?mode=developer`).
+While iterating on a test device you can add `?mode=developer` to **both** entries and turn on **Settings → Developer
+→ Associated Domains Development**:
+
+```xml
+<string>applinks:cashier.example.com?mode=developer</string>
+<string>webcredentials:cashier.example.com?mode=developer</string>
+```
+
+iOS then fetches the AASA file from your server directly instead of Apple's CDN, so changes show up right away. If
+only `applinks` has the suffix, iOS still checks `webcredentials` against the CDN copy, which may not have it yet.
+Ship release builds with the plain entries (no `?mode=developer`).
 
 ### 4. Publish the apple-app-site-association file
 
@@ -142,8 +149,9 @@ Requirements that commonly break it:
 - **`Content-Type: application/json`.** Some static hosts serve the extensionless file as
   `application/octet-stream`. If yours does, publish a copy named `apple-app-site-association.json` and add a rewrite
   from the extensionless path to it, so the type comes from the `.json` extension.
-- **Merge, don't replace.** If the domain already serves an AASA file for other apps, add your entry to it.
-  Replacing the file breaks the other apps' links.
+- **Merge, don't replace.** If the domain already serves an AASA file for other apps, add your app to it in both
+  places: an entry under `applinks.details`, and your app ID in the `webcredentials.apps` list (create the
+  `webcredentials` key if the file doesn't have one). Replacing the file breaks the other apps' links.
 
 Check it:
 
@@ -153,6 +161,9 @@ curl -sI https://cashier.example.com/.well-known/apple-app-site-association
 # What Apple's CDN has cached (devices read this copy; it can lag your server by a while)
 curl -s https://app-site-association.cdn-apple.com/a/v1/cashier.example.com
 ```
+
+In the CDN copy, confirm your app ID appears under `applinks` **and** under `webcredentials`. Release builds read the
+CDN copy, so wait until it shows your change before testing without `?mode=developer`.
 
 ### 5. Point the app at the host
 

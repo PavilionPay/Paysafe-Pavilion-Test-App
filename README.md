@@ -1,8 +1,9 @@
 # Paysafe Checkout + VIP Preferred on iOS
 
-A reference implementation of the **Paysafe Checkout SDK** with **VIP Preferred** (Pavilion's ACH payment method),
-the option that invokes **Plaid** so the patron can link a bank account. It's an iOS app and a small backend that
-take a deposit end to end, covering bank login through Plaid OAuth and the enrollment of new patrons.
+A reference implementation of the **Paysafe Checkout SDK** using **VIP Preferred**, Pavilion's ACH payment method.
+When a patron chooses VIP Preferred, Checkout opens **Plaid** so they can link their bank account. The repo contains
+an iOS app and a small backend that complete a deposit end to end, including new-patron enrollment and bank login
+through Plaid OAuth.
 
 The app is a small sportsbook-style lobby with a cashier. Like a real operator cashier, it lists every deposit
 method the operator offers (card, PayPal, Apple Pay, cage, wire, and so on) on the operator's own screen. **VIP

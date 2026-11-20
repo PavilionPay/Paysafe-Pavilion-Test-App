@@ -10,7 +10,7 @@ control this with **one URL, the return URL**. Nothing else needs to be register
 | **Return URL** | The URL the cashier page navigates to when Checkout finishes. Reaching it closes the cashier and gives your app the result. **You set it.** |
 | **Custom scheme** | One way to build the return URL: `yourapp://cashier-return?...`. Works everywhere, with no server setup. |
 | **Universal Link** | The other way: an `https://` return URL on your own domain, such as `https://cashier.example.com/cashier-return?...`. Apple verifies that the domain belongs to your app, so no other app can receive it. |
-| **Bank OAuth redirect URL** | Where the bank sends the patron after they log in to link a bank account. It belongs to Paysafe and Pavilion, and Plaid uses it. **You don't set it or handle it.** |
+| **Bank OAuth redirect URL** | Where the bank sends the patron after they log in to link a bank account. It's a page on Paysafe's Checkout host, registered with Plaid by Pavilion. **You don't set it or handle it.** |
 
 A Universal Link is not a separate URL. It's a property of an `https://` URL, so it's an option for the return URL,
 not another URL to manage.
@@ -175,9 +175,10 @@ the AASA file when the app is installed.
 
 ## Bank login: nothing to configure
 
-The bank OAuth redirect URL is Paysafe's hosted page. Paysafe and Pavilion set it up with Plaid, and the patron
-returns to it inside the same `ASWebAuthenticationSession`. You don't register anything with Plaid, and your app
-doesn't need to handle any bank or Plaid link. Your app only ever receives the return URL.
+The bank OAuth redirect URL is a page on Paysafe's Checkout host. Pavilion has already registered it with Plaid, and
+the patron returns to it inside the same `ASWebAuthenticationSession`. Nothing is needed from you or from Paysafe:
+you don't register anything with Plaid, and your app doesn't handle any bank or Plaid link. Your app only ever
+receives the return URL.
 
 **Banks with their own app.** A few banks (for example Chase) can hand the login to their own iOS app when the patron
 has it installed. That return path, from the bank's app back into the cashier, isn't covered by this sample yet.

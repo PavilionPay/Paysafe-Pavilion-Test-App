@@ -177,7 +177,7 @@ You set **one URL, the return URL**. The cashier page navigates to it when Check
 | **Return URL** | Where the cashier page goes when Checkout finishes | **You** |
 | **Custom scheme** | Return URL as `yourapp://cashier-return`: works everywhere, no server setup; fine for development | You (option) |
 | **Universal Link** | Return URL as `https://<your-domain>/cashier-return`: Apple-verified, so no other app can receive it; recommended for production (HTTPS, iOS 17.4+) | You (option) |
-| **Bank OAuth redirect URL** | Where the bank sends the patron after bank login; Paysafe's hosted page | Paysafe and Pavilion. **Nothing for you to do** (see the [note on banks with their own app](docs/returning-to-the-app.md#bank-login-nothing-to-configure)) |
+| **Bank OAuth redirect URL** | Where the bank sends the patron after bank login; a page on Paysafe's Checkout host | Pavilion (already registered). **Nothing for you to do** (see the [note on banks with their own app](docs/returning-to-the-app.md#bank-login-nothing-to-configure)) |
 
 See **[docs/returning-to-the-app.md](docs/returning-to-the-app.md)** for the steps, why the cashier runs in
 `ASWebAuthenticationSession`, and the Universal Link setup (domain, AASA file, entitlement).
